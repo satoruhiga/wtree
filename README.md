@@ -23,15 +23,23 @@ go build -o wtree.exe .
 # Initialize (creates .wtree/config.toml)
 wtree init
 
-# Create a new worktree and open in Windows Terminal
+# Create a new worktree and open in terminal
 wtree new
 wtree new --pane    # Open in split pane
+wtree new -q        # Create without opening terminal
 
 # List all worktrees
 wtree ls
 
 # Open existing worktree (partial ID match supported)
 wtree open a3f8
+
+# Print worktree path
+wtree pwd a3f8
+cd $(wtree pwd a3f8)  # Change to worktree directory
+
+# Execute terminal.exec command
+wtree exec  # Run terminal.exec from config
 
 # Remove a worktree
 wtree rm a3f8
@@ -60,6 +68,7 @@ commands = ["npm install"]
 
 [terminal]
 mode = "tab"  # "tab" | "pane" | "window"
+exec = "claude"  # Command to run after opening (optional)
 ```
 
 ## License

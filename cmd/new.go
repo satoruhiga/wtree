@@ -19,24 +19,27 @@ import (
 
 var newCmd = &cobra.Command{
 	Use:   "new",
-	Short: "Create a new worktree and open in Windows Terminal",
+	Short: "Create a new worktree and open in terminal",
 	Long: `Create a new worktree with an 8-character random ID and open it
-in Windows Terminal.
+in terminal (Windows Terminal on Windows, tmux on macOS/Linux).
 
 Examples:
-  wtree new          # Create and open in new tab
+  wtree new          # Create and open in new tab/window
   wtree new --pane   # Create and open in split pane
+  wtree new -q       # Create without opening terminal
   wtree new -n 3     # Create 3 worktrees at once`,
 	RunE: runNew,
 }
 
 var (
 	newPane  bool
+	newQuiet bool
 	newCount int
 )
 
 func init() {
 	newCmd.Flags().BoolVar(&newPane, "pane", false, "Open in split pane instead of new tab")
+	newCmd.Flags().BoolVarP(&newQuiet, "quiet", "q", false, "Create worktree without opening terminal")
 	newCmd.Flags().IntVarP(&newCount, "n", "n", 1, "Number of worktrees to create")
 	rootCmd.AddCommand(newCmd)
 }
@@ -72,7 +75,7 @@ func runNew(cmd *cobra.Command, args []string) error {
 
 	// Create worktrees
 	for i := 0; i < newCount; i++ {
-		if err := createWorktree(repoRoot, cfg, store, mode); err != nil {
+		if err := createWorktree(repoRoot, cfg, store, mode, newQuiet); err != nil {
 			return err
 		}
 	}
@@ -80,7 +83,7 @@ func runNew(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func createWorktree(repoRoot string, cfg *config.Config, store *session.Store, mode terminal.OpenMode) error {
+func createWorktree(repoRoot string, cfg *config.Config, store *session.Store, mode terminal.OpenMode, quiet bool) error {
 	// Generate ID
 	newID, err := id.Generate()
 	if err != nil {
@@ -137,14 +140,16 @@ func createWorktree(repoRoot string, cfg *config.Config, store *session.Store, m
 		return fmt.Errorf("failed to save session: %w", err)
 	}
 
-	// Open in Windows Terminal
-	if terminal.IsAvailable() {
-		fmt.Println("Opening in Windows Terminal...")
-		if err := terminal.OpenInTerminal(worktreeAbsPath, mode, cfg.Terminal.Exec); err != nil {
-			fmt.Printf("Warning: failed to open terminal: %v\n", err)
+	// Open in terminal (unless quiet mode)
+	if !quiet {
+		if terminal.IsAvailable() {
+			fmt.Printf("Opening in %s...\n", terminal.TerminalName())
+			if err := terminal.OpenInTerminal(worktreeAbsPath, mode, cfg.Terminal.Exec); err != nil {
+				fmt.Printf("Warning: failed to open terminal: %v\n", err)
+			}
+		} else {
+			fmt.Printf("Path: %s\n", worktreeAbsPath)
 		}
-	} else {
-		fmt.Printf("Path: %s\n", worktreeAbsPath)
 	}
 
 	return nil
